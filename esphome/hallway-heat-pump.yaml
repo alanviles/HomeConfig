@@ -2,95 +2,107 @@
 # Definition: definitions/boards/pico32/manifest.yaml
 
 esphome:
-    name: hallway-heat-pump
-    friendly_name: Hallway Heat Pump
-
+  name: hallway-heat-pump
+  friendly_name: Hallway Heat Pump
+  
 esp32:
-    board: pico32
-    framework:
-        type: esp-idf
+  board: pico32
+  framework:
+    type: esp-idf
 
 logger:
-    baud_rate: 0
-    level: DEBUG
+  baud_rate: 0
+  level: DEBUG
 
 api:
-    encryption:
-        key: !secret hallway_heat_pump__encryption_key
+  encryption:
+    key: !secret hallway_heat_pump__encryption_key
 ota:
-    - platform: esphome
-      encryption:
+  - platform: esphome
+    encryption: 
 
 wifi:
-    ssid: !secret wifi_ssid
-    password: !secret wifi_password
-    ap:
-        ssid: Hallway HP Fallback Hotspot
-        password: !secret hallway_heat_pump__ap_password
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  ap:
+    ssid: Hallway HP Fallback Hotspot
+    password: !secret hallway_heat_pump__ap_password
 captive_portal:
 
+# Fork of the ESPHome 2026.10.0 mitsubishi_cn105 component with horizontal vane,
+# outside air, input power, and energy. refresh: always picks up branch updates.
 external_components:
-    - source: github://echavet/MitsubishiCN105ESPHome
+  - source: github://alanviles/esphome@mitsubishi-cn105-vane-energy-2026.10.0
+    components: [mitsubishi_cn105]
+    refresh: always
 
 uart:
-    id: HP_UART
-    baud_rate: 2400
-    data_bits: 8
-    parity: EVEN
-    stop_bits: 1
-    tx_pin: 33
-    rx_pin: 32
+  id: HP_UART
+  baud_rate: 2400
+  data_bits: 8
+  parity: EVEN
+  stop_bits: 1
+  tx_pin: 33 
+  rx_pin: 32
+
 substitutions:
-    entity_prefix: Hallway Heat Pump
+  entity_prefix: Hallway Heat Pump
+
+mitsubishi_cn105:
+  id: hp_hub
+  uart_id: HP_UART
+  update_interval: 2s
+  telemetry_request_min_interval: 2s
+
 climate:
-    - platform: cn105
-      name: ${entity_prefix}
-      icon: mdi:heat-pump
-      id: hp
-      visual:
-          min_temperature: 15
-          max_temperature: 31
-          temperature_step:
-              target_temperature: 1
-              current_temperature: 0.1
-      outside_air_temperature_sensor:
-          name: ${entity_prefix} Outside Air Temperature
-      vertical_vane_select:
-          name: ${entity_prefix} Vertical Vane
-      horizontal_vane_select:
-          name: ${entity_prefix} Horizontal Vane
-      input_power_sensor:
-          name: ${entity_prefix} Input Power
-          disabled_by_default: true
-      kwh_sensor:
-          name: ${entity_prefix} Energy
-          disabled_by_default: true
-      remote_temperature_timeout: 30min
-      debounce_delay: 500ms
-      update_interval: 2s
+  - platform: mitsubishi_cn105
+    mitsubishi_cn105_id: hp_hub
+    name: ${entity_prefix}
+    icon: mdi:heat-pump
+    id: hp
+    supported_swing_modes: BOTH
+
+select:
+  - platform: mitsubishi_cn105
+    mitsubishi_cn105_id: hp_hub
+    vertical_vane_direction:
+      name: ${entity_prefix} Vertical Vane
+    horizontal_vane_direction:
+      name: ${entity_prefix} Horizontal Vane
 
 sensor:
-    - platform: template
-      name: ${entity_prefix} Inside Temperature
-      id: hp_internal_temp
-      unit_of_measurement: "°C"
-      device_class: temperature
-      state_class: measurement
-      accuracy_decimals: 1
-      update_interval: 10s
-      lambda: |-
-          float t = id(hp).current_temperature;
-          if (isnan(t)) {
-            return {};
-          }
-          return t;
-    - platform: wifi_signal
-      name: WiFi Signal Sensor
-      id: sensor_wifi_signal_1
+  - platform: mitsubishi_cn105
+    mitsubishi_cn105_id: hp_hub
+    outside_air_temperature:
+      name: ${entity_prefix} Outside Air Temperature
+    input_power:
+      name: ${entity_prefix} Input Power
+    energy:
+      name: ${entity_prefix} Energy
+  - platform: template
+    name: ${entity_prefix} Inside Temperature
+    id: hp_internal_temp
+    unit_of_measurement: "°C"
+    device_class: temperature
+    state_class: measurement
+    accuracy_decimals: 1
+    update_interval: 10s
+    lambda: |-
+      float t = id(hp).current_temperature;
+      if (isnan(t)) {
+        return {};
+      }
+      return t;
+  - platform: wifi_signal
+    name: WiFi Signal Sensor
+    id: sensor_wifi_signal_1
+  - platform: uptime
+    name: Uptime
+    id: sensor_uptime_1
 
 bluetooth_proxy:
 
 button:
-    - platform: restart
-      name: Restart Button
-      id: button_restart_1
+  - platform: restart
+    name: Restart Button
+    id: button_restart_1
