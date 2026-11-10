@@ -43,5 +43,5 @@ flowchart LR
     n14@{ shape: rect}
     n15@{ shape: rect}
     n16@{ shape: rect}
-    style s4 stroke:#2962FF,fill:#BBDEFB
+    style s4 stroke:#2962FF,fill:transparent
 ```
